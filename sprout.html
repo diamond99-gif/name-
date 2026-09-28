@@ -1,0 +1,1353 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>Sprout — daily habit tracker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f7f5ef;
+    --fg: #242b22;
+    --muted: #67735f;
+    --hairline: #dfe1d3;
+    --input-bg: #fdfcf8;
+    --pine: #2f4638;
+    --pine-fg: #f7f5ef;
+    --moss: #5f765a;
+    --sage: #9db08d;
+    --gold: #c2913c;
+    --bud: #7aa37a;
+    --stem: #5f7f58;
+    --leaf: #74a069;
+    --soil: #c9c2ae;
+    --day-off: #e7e9dc;
+    --day-off-border: #d2d6c5;
+    --focus-ring: #c2913c;
+    --focus-soft: rgba(194, 145, 60, 0.18);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #141915;
+      --fg: #e8e6da;
+      --muted: #9aa691;
+      --hairline: #2a3329;
+      --input-bg: #1a221a;
+      --pine: #a9c9a2;
+      --pine-fg: #141915;
+      --moss: #83a87a;
+      --sage: #6f8766;
+      --gold: #d9b45e;
+      --bud: #92bf91;
+      --stem: #82b078;
+      --leaf: #79a06f;
+      --soil: #4a4538;
+      --day-off: #1e2720;
+      --day-off-border: #39443a;
+      --focus-ring: #d9b45e;
+      --focus-soft: rgba(217, 180, 94, 0.2);
+    }
+  }
+
+  * { box-sizing: border-box; }
+
+  html { -webkit-text-size-adjust: 100%; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--fg);
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    transition: color 0.2s ease;
+  }
+
+  .bg {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    overflow: hidden;
+    pointer-events: none;
+  }
+
+  .blob {
+    position: absolute;
+    border-radius: 50%;
+    will-change: transform;
+  }
+
+  .blob-1 {
+    width: 520px;
+    height: 520px;
+    top: -180px;
+    left: -140px;
+    background: radial-gradient(circle, var(--sage) 0%, transparent 70%);
+    opacity: 0.28;
+    animation: drift1 26s ease-in-out infinite alternate;
+  }
+
+  .blob-2 {
+    width: 460px;
+    height: 460px;
+    bottom: -200px;
+    right: -160px;
+    background: radial-gradient(circle, var(--gold) 0%, transparent 70%);
+    opacity: 0.2;
+    animation: drift2 32s ease-in-out infinite alternate;
+  }
+
+  .blob-3 {
+    width: 360px;
+    height: 360px;
+    top: 38%;
+    left: 52%;
+    background: radial-gradient(circle, var(--leaf) 0%, transparent 70%);
+    opacity: 0.16;
+    animation: drift3 22s ease-in-out infinite alternate;
+  }
+
+  @keyframes drift1 {
+    from { transform: translate3d(0, 0, 0) scale(1); }
+    to   { transform: translate3d(130px, 70px, 0) scale(1.12); }
+  }
+
+  @keyframes drift2 {
+    from { transform: translate3d(0, 0, 0) scale(1); }
+    to   { transform: translate3d(-150px, -90px, 0) scale(1.08); }
+  }
+
+  @keyframes drift3 {
+    from { transform: translate3d(0, 0, 0) scale(1); }
+    to   { transform: translate3d(-100px, 80px, 0) scale(1.2); }
+  }
+
+  .leaf {
+    position: absolute;
+    bottom: -12vh;
+    opacity: 0.34;
+    animation: floatUp var(--dur, 26s) linear infinite;
+    animation-delay: var(--delay, 0s);
+    will-change: transform;
+  }
+
+  .leaf svg { display: block; }
+
+  @keyframes floatUp {
+    0%   { transform: translate3d(0, 0, 0) rotate(0deg); }
+    50%  { transform: translate3d(var(--sway, 40px), -55vh, 0) rotate(180deg); }
+    100% { transform: translate3d(0, -115vh, 0) rotate(360deg); }
+  }
+
+  .layout {
+    display: flex;
+    align-items: flex-start;
+    max-width: 1000px;
+    margin: 0 auto;
+    min-height: 100vh;
+    position: relative;
+    z-index: 1;
+  }
+
+  .sidebar {
+    flex: none;
+    width: 260px;
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    overflow-y: auto;
+    padding: 40px 24px 40px;
+    border-right: 1px solid var(--hairline);
+    transition: width 0.28s cubic-bezier(0.4, 0, 0.2, 1), padding 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .main {
+    flex: 1;
+    min-width: 0;
+    max-width: 640px;
+    padding: 48px 44px 96px;
+  }
+
+  .brand { display: flex; align-items: center; gap: 11px; }
+
+  .brand-mark { width: 26px; height: 26px; }
+
+  .title {
+    font-family: 'Fraunces', Georgia, serif;
+    font-size: 32px;
+    font-weight: 600;
+    margin: 0;
+    letter-spacing: -0.02em;
+    line-height: 1.08;
+    font-optical-sizing: auto;
+  }
+
+  .tagline {
+    margin: 7px 0 0 37px;
+    color: var(--muted);
+    font-size: 15px;
+  }
+
+  .sidebar-wallet {
+    margin-top: 22px;
+  }
+
+  .coin-pill {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 14px;
+    border: 1px solid var(--hairline);
+    border-radius: 999px;
+    background: var(--input-bg);
+    font-weight: 600;
+    font-size: 14px;
+    color: var(--fg);
+  }
+
+  .coin-icon { width: 18px; height: 18px; }
+
+  .coin-amount { min-width: 1.5em; text-align: center; }
+
+  .coin-gain {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--gold);
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .coin-gain.show {
+    animation: coinFloat 1.2s ease forwards;
+  }
+
+  @keyframes coinFloat {
+    0% { opacity: 0; transform: translateY(0); }
+    25% { opacity: 1; transform: translateY(-6px); }
+    100% { opacity: 0; transform: translateY(-22px); }
+  }
+
+  .play-btn {
+    display: block;
+    width: 100%;
+    margin-top: 10px;
+    padding: 9px 12px;
+    border: 1px solid var(--hairline);
+    border-radius: 10px;
+    background: transparent;
+    color: var(--fg);
+    font: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.12s ease, border-color 0.12s ease;
+  }
+
+  .play-btn:hover { border-color: var(--muted); background: var(--day-off); }
+
+  .sidebar-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    border: 1px solid var(--hairline);
+    border-radius: 10px;
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    margin-bottom: 22px;
+    transition: background-color 0.12s ease, border-color 0.12s ease, color 0.12s ease;
+  }
+
+  .sidebar-toggle:hover { border-color: var(--muted); color: var(--fg); }
+
+  .sidebar-toggle svg { width: 18px; height: 18px; }
+
+  .layout.sidebar-collapsed .sidebar {
+    width: 64px;
+    padding: 16px 13px;
+  }
+
+  .layout.sidebar-collapsed .sidebar-toggle { margin: 0; }
+
+  .layout.sidebar-collapsed .brand,
+  .layout.sidebar-collapsed .tagline,
+  .layout.sidebar-collapsed .sidebar-wallet,
+  .layout.sidebar-collapsed .sidebar-label,
+  .layout.sidebar-collapsed .habit-list,
+  .layout.sidebar-collapsed .sidebar-empty {
+    display: none;
+  }
+
+  .sidebar-label {
+    margin: 30px 0 12px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .habit-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .habit-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    padding: 10px 12px;
+    border: none;
+    border-radius: 10px;
+    background: none;
+    color: var(--fg);
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+    transition: background-color 0.12s ease;
+  }
+
+  .habit-item:hover { background: var(--day-off); }
+
+  .habit-item.is-selected {
+    background: var(--day-off);
+    box-shadow: inset 3px 0 0 var(--moss);
+  }
+
+  .habit-item.is-selected .habit-item-name { font-weight: 600; }
+
+  .habit-item-icon {
+    flex: 0 0 24px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+
+  .habit-item-icon svg { width: 20px; height: 30px; }
+
+  .habit-item-body {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+
+  .habit-item-name {
+    font-family: 'Fraunces', Georgia, serif;
+    font-size: 15px;
+    font-weight: 500;
+    line-height: 1.25;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .habit-item-streak {
+    font-size: 11px;
+    color: var(--muted);
+    line-height: 1.3;
+  }
+
+  .sidebar-empty {
+    margin: 4px 0 0;
+    font-size: 13px;
+    color: var(--muted);
+  }
+
+  .add-form {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 8px;
+  }
+
+  #habit-input {
+    flex: 1;
+    min-width: 0;
+    font: inherit;
+    font-size: 15px;
+    color: var(--fg);
+    background: var(--input-bg);
+    border: 1px solid var(--hairline);
+    border-radius: 12px;
+    padding: 13px 16px;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  }
+
+  #habit-input::placeholder { color: var(--muted); opacity: 0.75; }
+
+  #habit-input:focus {
+    outline: none;
+    border-color: var(--focus-ring);
+    box-shadow: 0 0 0 3px var(--focus-soft);
+  }
+
+  .btn {
+    font: inherit;
+    font-weight: 600;
+    font-size: 15px;
+    border: none;
+    cursor: pointer;
+    border-radius: 12px;
+    transition: background-color 0.15s ease, color 0.15s ease, transform 0.05s ease, box-shadow 0.15s ease;
+  }
+
+  .btn-primary {
+    background: var(--pine);
+    color: var(--pine-fg);
+    padding: 13px 20px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+  }
+
+  .btn-primary:hover { filter: brightness(1.06); box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); }
+  .btn-primary:active { transform: translateY(1px); box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06); }
+
+  .save-note {
+    margin: 12px 0 0;
+    font-size: 13px;
+    color: var(--moss);
+  }
+
+  .detail { margin-top: 28px; }
+
+  .habit {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+    padding: 24px 0;
+    border-top: 1px solid var(--hairline);
+  }
+
+  .habit-sprout {
+    flex: 0 0 44px;
+    display: flex;
+    justify-content: center;
+    padding-top: 2px;
+  }
+
+  .habit-main { flex: 1; min-width: 0; }
+
+  .habit-name {
+    font-family: 'Fraunces', Georgia, serif;
+    font-size: 21px;
+    font-weight: 500;
+    margin: 0;
+    letter-spacing: -0.01em;
+    line-height: 1.3;
+    word-break: break-word;
+    font-optical-sizing: auto;
+  }
+
+  .habit-streak {
+    margin: 3px 0 0;
+    font-size: 13px;
+    color: var(--muted);
+  }
+
+  .habit-streak.is-gold { color: var(--gold); font-weight: 600; }
+
+  .days {
+    display: flex;
+    gap: 7px;
+    margin-top: 14px;
+  }
+
+  .day {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+  }
+
+  .day-square {
+    position: relative;
+    width: 24px;
+    height: 24px;
+    border: 1px solid var(--day-off-border);
+    border-radius: 6px;
+    background: var(--day-off);
+    transition: background-color 0.12s ease, border-color 0.12s ease, transform 0.06s ease;
+  }
+
+  .day.is-done .day-square {
+    background: var(--moss);
+    border-color: var(--moss);
+  }
+
+  .day.is-done .day-square::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 45%;
+    width: 5px;
+    height: 9px;
+    border: solid var(--pine-fg);
+    border-width: 0 2px 2px 0;
+    transform: translate(-50%, -50%) rotate(45deg);
+  }
+
+  .day.is-today .day-square { border-color: var(--muted); border-width: 2px; }
+
+  .day-label {
+    font-size: 10px;
+    letter-spacing: 0.03em;
+    color: var(--muted);
+    text-transform: uppercase;
+    line-height: 1;
+  }
+
+  .day.is-today .day-label { font-weight: 700; }
+
+  .day:hover .day-square { border-color: var(--muted); }
+  .day.is-done:hover .day-square { filter: brightness(1.08); }
+  .day:active .day-square { transform: scale(0.9); }
+
+  .habit-actions {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 9px;
+    flex: 0 0 auto;
+  }
+
+  .check-btn {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    border: 1.5px solid var(--hairline);
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, transform 0.08s ease;
+  }
+
+  .check-btn svg { width: 20px; height: 20px; }
+
+  .check-btn:hover { border-color: var(--muted); }
+
+  .check-btn.is-done {
+    background: var(--pine);
+    border-color: var(--pine);
+    color: var(--pine-fg);
+  }
+
+  .check-btn.is-done:hover { filter: brightness(1.06); }
+
+  .check-btn:active { transform: scale(0.94); }
+
+  .remove-btn {
+    background: none;
+    border: none;
+    padding: 2px 0;
+    font: inherit;
+    font-size: 12px;
+    color: var(--muted);
+    cursor: pointer;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+
+  .remove-btn:hover { color: var(--fg); }
+
+  .empty-state {
+    text-align: center;
+    padding: 48px 0 32px;
+    border-top: 1px solid var(--hairline);
+    margin-top: 16px;
+  }
+
+  .empty-illustration { width: 120px; height: auto; margin-bottom: 14px; }
+
+  .empty-title {
+    font-family: 'Fraunces', Georgia, serif;
+    font-size: 22px;
+    font-weight: 500;
+    margin: 0;
+    font-optical-sizing: auto;
+  }
+
+  .empty-sub { color: var(--muted); font-size: 14px; margin: 7px 0 0; }
+
+  .modal {
+    position: fixed;
+    inset: 0;
+    z-index: 50;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+  }
+
+  .modal[hidden] { display: none; }
+
+  .modal-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.45);
+    border: none;
+    cursor: pointer;
+  }
+
+  .modal-panel {
+    position: relative;
+    width: 100%;
+    max-width: 360px;
+    background: var(--bg);
+    border: 1px solid var(--hairline);
+    border-radius: 18px;
+    padding: 30px 24px 24px;
+    text-align: center;
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.3);
+  }
+
+  .modal-title {
+    font-family: 'Fraunces', Georgia, serif;
+    font-size: 24px;
+    font-weight: 600;
+    margin: 0;
+    letter-spacing: -0.01em;
+    font-optical-sizing: auto;
+  }
+
+  .modal-sub { color: var(--muted); font-size: 14px; margin: 8px 0 0; }
+
+  .shop-balance {
+    margin: 8px 0 0;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--gold);
+  }
+
+  .shop-panel {
+    max-width: 420px;
+    max-height: 80vh;
+    overflow-y: auto;
+    text-align: left;
+  }
+
+  .shop-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 18px;
+  }
+
+  .plant-card {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    border: 1px solid var(--hairline);
+    border-radius: 12px;
+    background: var(--input-bg);
+  }
+
+  .plant-card-icon {
+    width: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .plant-card-icon svg { width: 24px; height: 36px; }
+
+  .plant-card-name { flex: 1; font-weight: 600; font-size: 14px; }
+
+  .buy-btn {
+    padding: 7px 12px;
+    border: 1px solid var(--hairline);
+    border-radius: 9px;
+    background: transparent;
+    color: var(--fg);
+    font: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+
+  .buy-btn:hover:not(:disabled) { border-color: var(--muted); background: var(--day-off); }
+  .buy-btn:disabled { opacity: 0.5; cursor: default; }
+  .buy-btn.owned { color: var(--muted); }
+
+  .plant-picker {
+    margin-top: 14px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .plant-picker-label { font-size: 12px; color: var(--muted); }
+
+  .plant-picker-icons { display: flex; gap: 6px; flex-wrap: wrap; }
+
+  .plant-pick {
+    width: 34px;
+    height: 34px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--hairline);
+    border-radius: 8px;
+    background: transparent;
+    cursor: pointer;
+    padding: 0;
+  }
+
+  .plant-pick svg { width: 20px; height: 30px; }
+
+  .plant-pick.is-current { border-color: var(--moss); background: var(--day-off); }
+
+  .modal-close {
+    display: block;
+    margin: 12px auto 0;
+    background: none;
+    border: none;
+    padding: 4px 8px;
+    font: inherit;
+    font-size: 13px;
+    color: var(--muted);
+    cursor: pointer;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+
+  .modal-close:hover { color: var(--fg); }
+
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 2px;
+  }
+
+  .day:focus-visible { outline: none; }
+  .day:focus-visible .day-square { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+
+  @media (max-width: 760px) {
+    .layout { flex-direction: column; }
+    .sidebar {
+      flex: none;
+      width: 100%;
+      position: static;
+      height: auto;
+      overflow-y: visible;
+      border-right: none;
+      border-bottom: 1px solid var(--hairline);
+      padding: 32px 20px 24px;
+    }
+    .main { padding: 32px 20px 72px; }
+
+    .layout.sidebar-collapsed .sidebar { width: 100%; padding: 16px 20px; }
+    .layout.sidebar-collapsed .sidebar-toggle { margin-bottom: 16px; }
+    .layout.sidebar-collapsed .brand { display: flex; }
+    .layout.sidebar-collapsed .tagline { display: block; }
+  }
+
+  @media (max-width: 420px) {
+    .add-form { flex-direction: column; }
+    .btn-primary { width: 100%; }
+    .day-square { width: 20px; height: 20px; }
+    .days { gap: 5px; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { animation: none !important; transition: none !important; }
+  }
+</style>
+</head>
+<body>
+  <div class="bg" aria-hidden="true">
+    <span class="blob blob-1"></span>
+    <span class="blob blob-2"></span>
+    <span class="blob blob-3"></span>
+  </div>
+
+  <div class="layout" id="layout">
+    <aside class="sidebar">
+      <button class="sidebar-toggle" type="button" id="sidebar-toggle" aria-label="Toggle habits panel" aria-expanded="true" aria-controls="habit-list">
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <path d="M4 7h16M4 12h16M4 17h16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+      </button>
+      <div class="brand">
+        <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true" focusable="false">
+          <path d="M27 5 C 27 17 19 27 5 27 C 5 15 15 5 27 5 Z" style="fill:var(--moss)"/>
+          <path d="M5 27 C 10 20 16 15 23 10" fill="none" style="stroke:var(--bg)" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+        <h1 class="title">Sprout</h1>
+      </div>
+      <p class="tagline">Tend small habits. Watch them grow.</p>
+
+      <div class="sidebar-wallet">
+        <div class="coin-pill">
+          <svg class="coin-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <circle cx="12" cy="12" r="10" fill="var(--gold)"/>
+            <circle cx="12" cy="12" r="10" fill="none" stroke="rgba(0,0,0,0.15)" stroke-width="1"/>
+            <path d="M12 16.5 C 9 14 8.6 11 11 8.5 C 13 10 13.4 13 12 16.5 Z" fill="#fff" opacity="0.95"/>
+          </svg>
+          <span class="coin-amount" id="coin-amount">0</span>
+          <span class="coin-gain" id="coin-gain"></span>
+        </div>
+        <button class="play-btn" type="button" id="shop-btn">Plant shop</button>
+      </div>
+
+      <h2 class="sidebar-label">Your habits</h2>
+      <ul id="habit-list" class="habit-list"></ul>
+      <p id="sidebar-empty" class="sidebar-empty" hidden>Nothing here yet — plant your first habit.</p>
+    </aside>
+
+    <main class="main">
+      <form id="add-form" class="add-form" autocomplete="off">
+        <label class="sr-only" for="habit-input">Habit name</label>
+        <input id="habit-input" type="text" placeholder="What would you like to grow?" maxlength="60">
+        <button type="submit" class="btn btn-primary">Save</button>
+      </form>
+      <p id="save-note" class="save-note" hidden>Saved! Add another, or pick one from the side.</p>
+
+      <section id="detail" class="detail"></section>
+
+      <div id="empty-state" class="empty-state" hidden>
+        <svg class="empty-illustration" viewBox="0 0 120 120" aria-hidden="true" focusable="false">
+          <path d="M28 90 Q60 76 92 90 Q60 97 28 90 Z" style="fill:var(--soil)"/>
+          <path d="M60 86 C 59 76 59 70 60 60" fill="none" style="stroke:var(--stem)" stroke-width="3" stroke-linecap="round"/>
+          <path d="M60 62 C 49 55 42 45 45 36 C 55 43 59 55 60 62 Z" style="fill:var(--leaf)"/>
+          <path d="M60 62 C 71 55 78 45 75 36 C 65 43 61 55 60 62 Z" style="fill:var(--leaf)"/>
+          <path d="M60 58 C 57.5 54.5 57 51 60 47.5 C 63 51 62.5 54.5 60 58 Z" style="fill:var(--bud)"/>
+        </svg>
+        <p class="empty-title">Nothing planted yet</p>
+        <p class="empty-sub">Add your first habit above and mark today to start a streak.</p>
+      </div>
+    </main>
+  </div>
+
+  <div class="modal" id="shop-modal" hidden>
+    <button class="modal-backdrop" type="button" data-modal-close aria-label="Close shop"></button>
+    <div class="modal-panel shop-panel" role="dialog" aria-modal="true" aria-labelledby="shop-title">
+      <h2 class="modal-title" id="shop-title">Plant shop</h2>
+      <p class="modal-sub">Buy plants with your coins, then assign them to a habit.</p>
+      <p class="shop-balance" id="shop-balance"></p>
+      <div class="shop-list" id="shop-list"></div>
+      <button class="modal-close" type="button" id="shop-close">Close</button>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      'use strict';
+
+      var KEY = 'sprout-habits-v1';
+      var WEEKDAYS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+
+      function localDateString(d) {
+        var y = d.getFullYear();
+        var m = String(d.getMonth() + 1);
+        var day = String(d.getDate());
+        if (m.length === 1) m = '0' + m;
+        if (day.length === 1) day = '0' + day;
+        return y + '-' + m + '-' + day;
+      }
+
+      function todayString() { return localDateString(new Date()); }
+
+      function lastNDayStrings(n) {
+        var out = [];
+        for (var i = n - 1; i >= 0; i--) {
+          var d = new Date();
+          d.setDate(d.getDate() - i);
+          out.push(localDateString(d));
+        }
+        return out;
+      }
+
+      function computeStreak(dates) {
+        var set = {};
+        dates.forEach(function (d) { set[d] = true; });
+        var streak = 0;
+        var d = new Date();
+        while (set[localDateString(d)]) {
+          streak++;
+          d.setDate(d.getDate() - 1);
+        }
+        return streak;
+      }
+
+      function loadHabits() {
+        try {
+          var raw = localStorage.getItem(KEY);
+          if (!raw) return [];
+          var parsed = JSON.parse(raw);
+          if (!Array.isArray(parsed)) return [];
+          return parsed
+            .filter(function (h) {
+              return h && typeof h.name === 'string' && h.name.trim() && Array.isArray(h.dates);
+            })
+            .map(function (h) {
+              return {
+                name: h.name.trim(),
+                dates: h.dates.filter(function (d) { return typeof d === 'string'; }),
+                plant: typeof h.plant === 'string' ? h.plant : 'sprout'
+              };
+            });
+        } catch (e) {
+          return [];
+        }
+      }
+
+      function saveHabits(habits) {
+        try { localStorage.setItem(KEY, JSON.stringify(habits)); } catch (e) { /* storage unavailable */ }
+      }
+
+      var habits = loadHabits();
+      var selectedIndex = habits.length > 0 ? 0 : -1;
+      var saveNoteTimer = null;
+
+      var COINS_KEY = 'sprout-coins-v1';
+      function loadCoins() {
+        try {
+          var v = parseInt(localStorage.getItem(COINS_KEY), 10);
+          return isNaN(v) ? 0 : Math.max(0, v);
+        } catch (e) { return 0; }
+      }
+      function saveCoins(n) {
+        try { localStorage.setItem(COINS_KEY, String(n)); } catch (e) {}
+      }
+      var coins = loadCoins();
+
+      var OWNED_KEY = 'sprout-owned-plants-v1';
+      function loadOwnedPlants() {
+        var owned = ['sprout'];
+        try {
+          var raw = JSON.parse(localStorage.getItem(OWNED_KEY));
+          if (Array.isArray(raw)) {
+            raw.forEach(function (id) {
+              if (typeof id === 'string' && owned.indexOf(id) === -1) owned.push(id);
+            });
+          }
+        } catch (e) {}
+        return owned;
+      }
+      function saveOwnedPlants() {
+        try { localStorage.setItem(OWNED_KEY, JSON.stringify(ownedPlants)); } catch (e) {}
+      }
+      var ownedPlants = loadOwnedPlants();
+
+      var form = document.getElementById('add-form');
+      var input = document.getElementById('habit-input');
+      var list = document.getElementById('habit-list');
+      var sidebarEmpty = document.getElementById('sidebar-empty');
+      var detail = document.getElementById('detail');
+      var empty = document.getElementById('empty-state');
+      var saveNote = document.getElementById('save-note');
+      var layout = document.getElementById('layout');
+      var toggleBtn = document.getElementById('sidebar-toggle');
+      var coinAmount = document.getElementById('coin-amount');
+      var coinGain = document.getElementById('coin-gain');
+      var shopBtn = document.getElementById('shop-btn');
+      var shopModal = document.getElementById('shop-modal');
+      var shopClose = document.getElementById('shop-close');
+      var shopList = document.getElementById('shop-list');
+      var shopBalance = document.getElementById('shop-balance');
+
+      function streakText(streak) {
+        if (streak === 0) return 'No streak yet — mark today to begin.';
+        return streak + '-day streak';
+      }
+
+      function shortStreak(streak) {
+        return streak === 0 ? 'No streak' : streak + '-day streak';
+      }
+
+      function weekdayLabel(dateStr) {
+        var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateStr);
+        if (!m) return '';
+        var date = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+        return WEEKDAYS[date.getDay()];
+      }
+
+      function checkSVG() {
+        return '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">' +
+          '<path d="M5 12.5l4.5 4.5L19 7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>' +
+          '</svg>';
+      }
+
+      var PLANTS = [
+        { id: 'sprout', name: 'Sprout', price: 0, svg: '<path d="M8 64 Q24 56 40 64 Q24 68 8 64 Z" fill="var(--soil)"/><path d="M24 62 C 23 50 23 40 24 30" stroke="{G2}" stroke-width="3" fill="none" stroke-linecap="round"/><path d="M24 42 C 19 39 16 34 15 29 C 21 32 23 37 24 42 Z" fill="{G}"/><path d="M24 42 C 29 39 32 34 33 29 C 27 32 25 37 24 42 Z" fill="{G}"/><path d="M24 30 C 21.5 27.5 20.5 24 24 21.5 C 27.5 24 26.5 27.5 24 30 Z" fill="{G}"/>' },
+        { id: 'tulip', name: 'Tulip', price: 30, svg: '<path d="M11 62 h26 l-3 6 h-20 z" fill="var(--soil)"/><path d="M24 62 V 42" stroke="{G2}" stroke-width="3" stroke-linecap="round"/><path d="M17 42 C 16 35 18 29 24 27 C 30 29 32 35 31 42 C 27 40 25 40 24 40 C 23 40 21 40 17 42 Z" fill="{G}"/>' },
+        { id: 'daisy', name: 'Daisy', price: 50, svg: '<path d="M24 62 V 42" stroke="{G2}" stroke-width="3" stroke-linecap="round"/><circle cx="24" cy="31" r="5.5" fill="{G}"/><circle cx="24" cy="21.5" r="4" fill="{G}"/><circle cx="32" cy="27" r="4" fill="{G}"/><circle cx="29" cy="37" r="4" fill="{G}"/><circle cx="19" cy="37" r="4" fill="{G}"/><circle cx="16" cy="27" r="4" fill="{G}"/>' },
+        { id: 'mushroom', name: 'Mushroom', price: 40, svg: '<path d="M20 62 V 53" stroke="{G2}" stroke-width="4" stroke-linecap="round"/><path d="M12 53 C 12 43 17 37 24 37 C 31 37 36 43 36 53 Z" fill="{G}"/>' },
+        { id: 'cactus', name: 'Cactus', price: 70, svg: '<path d="M11 62 h26 l-3 6 h-20 z" fill="var(--soil)"/><rect x="19" y="30" width="10" height="32" rx="5" fill="{G}"/><rect x="27" y="41" width="9" height="4" rx="2" fill="{G}"/><rect x="30" y="34" width="4" height="9" rx="2" fill="{G}"/>' },
+        { id: 'fern', name: 'Fern', price: 60, svg: '<path d="M24 62 V 34" stroke="{G2}" stroke-width="3" stroke-linecap="round"/><path d="M24 42 C 16 40 12 36 10 29 C 16 31 21 35 24 42 Z" fill="{G}"/><path d="M24 36 C 17 33 14 28 13 21 C 18 24 22 29 24 36 Z" fill="{G}"/><path d="M24 42 C 32 40 36 36 38 29 C 32 31 27 35 24 42 Z" fill="{G}"/><path d="M24 36 C 31 33 34 28 35 21 C 30 24 26 29 24 36 Z" fill="{G}"/>' },
+        { id: 'tree', name: 'Tree', price: 100, svg: '<path d="M21 62 V 44" stroke="{G2}" stroke-width="5" stroke-linecap="round"/><circle cx="24" cy="33" r="11" fill="{G}"/><circle cx="14" cy="40" r="7" fill="{G}"/><circle cx="34" cy="40" r="7" fill="{G}"/>' },
+        { id: 'palm', name: 'Palm', price: 130, svg: '<path d="M24 62 C 24 54 24 48 24 40" stroke="{G2}" stroke-width="4" stroke-linecap="round"/><path d="M24 40 C 14 38 8 32 6 24 C 14 28 20 34 24 40 Z" fill="{G}"/><path d="M24 40 C 20 32 20 24 24 16 C 28 24 28 32 24 40 Z" fill="{G}"/><path d="M24 40 C 34 38 40 32 42 24 C 34 28 28 34 24 40 Z" fill="{G}"/>' }
+      ];
+
+      function findPlant(id) {
+        for (var i = 0; i < PLANTS.length; i++) {
+          if (PLANTS[i].id === id) return PLANTS[i];
+        }
+        return PLANTS[0];
+      }
+
+      function plantSVG(plantId, streak) {
+        var plant = findPlant(plantId);
+        var gold = streak >= 7;
+        var g = gold ? 'var(--gold)' : 'var(--leaf)';
+        var g2 = gold ? 'var(--gold)' : 'var(--stem)';
+        var inner = plant.svg.split('{G2}').join(g2).split('{G}').join(g);
+        return '<svg viewBox="0 0 48 72" width="44" height="66" aria-hidden="true" focusable="false">' + inner + '</svg>';
+      }
+
+      function plantPickerHTML(habit) {
+        var icons = ownedPlants.map(function (pid) {
+          var plant = findPlant(pid);
+          if (!plant) return '';
+          var current = habit.plant === pid;
+          return '<button class="plant-pick' + (current ? ' is-current' : '') + '" type="button" data-action="set-plant" data-plant="' + pid + '" aria-label="Use ' + plant.name + '" aria-pressed="' + current + '">' +
+            plantSVG(pid, 0) + '</button>';
+        }).join('');
+        return '<div class="plant-picker">' +
+          '<span class="plant-picker-label">Plant</span>' +
+          '<div class="plant-picker-icons">' + icons + '</div>' +
+          '</div>';
+      }
+
+      function dayToggleHTML(dateStr, isDone, isToday) {
+        var doneCls = isDone ? 'is-done' : '';
+        var todayCls = isToday ? 'is-today' : '';
+        var label = (isDone ? 'Marked done' : 'Not done') + ' for ' + dateStr;
+        return '<button class="day ' + doneCls + ' ' + todayCls + '" type="button" data-date="' + dateStr + '" aria-pressed="' + isDone + '" aria-label="' + label + '">' +
+          '<span class="day-square"></span>' +
+          '<span class="day-label">' + weekdayLabel(dateStr) + '</span>' +
+          '</button>';
+      }
+
+      function renderSidebar() {
+        list.innerHTML = '';
+        sidebarEmpty.hidden = habits.length > 0;
+        habits.forEach(function (habit, i) {
+          var streak = computeStreak(habit.dates);
+          var li = document.createElement('li');
+          var btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'habit-item' + (i === selectedIndex ? ' is-selected' : '');
+          btn.dataset.index = String(i);
+          btn.innerHTML =
+            '<span class="habit-item-icon">' + plantSVG(habit.plant, streak) + '</span>' +
+            '<span class="habit-item-body">' +
+              '<span class="habit-item-name"></span>' +
+              '<span class="habit-item-streak"></span>' +
+            '</span>';
+          btn.querySelector('.habit-item-name').textContent = habit.name;
+          btn.querySelector('.habit-item-streak').textContent = shortStreak(streak);
+          li.appendChild(btn);
+          list.appendChild(li);
+        });
+      }
+
+      function updateSidebarSelection() {
+        list.querySelectorAll('.habit-item').forEach(function (btn) {
+          btn.classList.toggle('is-selected', Number(btn.dataset.index) === selectedIndex);
+        });
+      }
+
+      function renderDetail() {
+        if (selectedIndex === -1 || !habits[selectedIndex]) {
+          detail.hidden = true;
+          empty.hidden = false;
+          return;
+        }
+        empty.hidden = true;
+        detail.hidden = false;
+        var habit = habits[selectedIndex];
+        var streak = computeStreak(habit.dates);
+        var dateSet = {};
+        habit.dates.forEach(function (d) { dateSet[d] = true; });
+        var days = lastNDayStrings(7);
+        var today = todayString();
+        var isDoneToday = !!dateSet[today];
+
+        var dayButtons = days.map(function (d) {
+          return dayToggleHTML(d, !!dateSet[d], d === today);
+        }).join('');
+
+        detail.innerHTML =
+          '<div class="habit">' +
+            '<div class="habit-sprout">' + plantSVG(habit.plant, streak) + '</div>' +
+            '<div class="habit-main">' +
+              '<h2 class="habit-name"></h2>' +
+              '<p class="habit-streak ' + (streak >= 7 ? 'is-gold' : '') + '"></p>' +
+              '<div class="days">' + dayButtons + '</div>' +
+              plantPickerHTML(habit) +
+            '</div>' +
+            '<div class="habit-actions">' +
+              '<button class="check-btn ' + (isDoneToday ? 'is-done' : '') + '" type="button" data-action="toggle-today" aria-pressed="' + isDoneToday + '" aria-label="' + (isDoneToday ? 'Marked done for today' : 'Mark today as done') + '">' + checkSVG() + '</button>' +
+              '<button class="remove-btn" type="button" data-action="remove">Remove</button>' +
+            '</div>' +
+          '</div>';
+
+        detail.querySelector('.habit-name').textContent = habit.name;
+        detail.querySelector('.habit-streak').textContent = streakText(streak);
+      }
+
+      function updateDetail() {
+        if (selectedIndex === -1 || !habits[selectedIndex]) return;
+        var habit = habits[selectedIndex];
+        var streak = computeStreak(habit.dates);
+        var dateSet = {};
+        habit.dates.forEach(function (d) { dateSet[d] = true; });
+        var today = todayString();
+        var isDoneToday = !!dateSet[today];
+
+        var sprout = detail.querySelector('.habit-sprout');
+        if (sprout) sprout.innerHTML = plantSVG(habit.plant, streak);
+
+        var streakEl = detail.querySelector('.habit-streak');
+        if (streakEl) {
+          streakEl.textContent = streakText(streak);
+          streakEl.classList.toggle('is-gold', streak >= 7);
+        }
+
+        detail.querySelectorAll('.day').forEach(function (btn) {
+          var done = !!dateSet[btn.dataset.date];
+          btn.classList.toggle('is-done', done);
+          btn.setAttribute('aria-pressed', String(done));
+          btn.setAttribute('aria-label', (done ? 'Marked done' : 'Not done') + ' for ' + btn.dataset.date);
+        });
+
+        var check = detail.querySelector('.check-btn');
+        if (check) {
+          check.classList.toggle('is-done', isDoneToday);
+          check.setAttribute('aria-pressed', String(isDoneToday));
+          check.setAttribute('aria-label', isDoneToday ? 'Marked done for today' : 'Mark today as done');
+        }
+
+        renderSidebar();
+      }
+
+      function render() {
+        renderSidebar();
+        renderDetail();
+      }
+
+      function toggleDay(index, date) {
+        var habit = habits[index];
+        if (!habit) return;
+        var pos = habit.dates.indexOf(date);
+        if (pos === -1) habit.dates.push(date);
+        else habit.dates.splice(pos, 1);
+        saveHabits(habits);
+        updateDetail();
+      }
+
+      form.addEventListener('submit', function (e) {
+        e.preventDefault();
+        var name = input.value.trim();
+        if (!name) return;
+        habits.push({ name: name, dates: [] });
+        selectedIndex = habits.length - 1;
+        saveHabits(habits);
+        input.value = '';
+        render();
+        input.focus();
+        saveNote.hidden = false;
+        clearTimeout(saveNoteTimer);
+        saveNoteTimer = setTimeout(function () { saveNote.hidden = true; }, 5000);
+      });
+
+      list.addEventListener('click', function (e) {
+        var btn = e.target.closest('.habit-item');
+        if (!btn) return;
+        selectedIndex = Number(btn.dataset.index);
+        updateSidebarSelection();
+        renderDetail();
+      });
+
+      detail.addEventListener('click', function (e) {
+        var dayBtn = e.target.closest('.day');
+        if (dayBtn) {
+          toggleDay(selectedIndex, dayBtn.dataset.date);
+          return;
+        }
+        var actionBtn = e.target.closest('[data-action]');
+        if (!actionBtn) return;
+        if (actionBtn.dataset.action === 'set-plant') {
+          var h = habits[selectedIndex];
+          if (h && ownedPlants.indexOf(actionBtn.dataset.plant) !== -1) {
+            h.plant = actionBtn.dataset.plant;
+            saveHabits(habits);
+            renderDetail();
+          }
+        } else if (actionBtn.dataset.action === 'toggle-today') {
+          var today = todayString();
+          var habit = habits[selectedIndex];
+          if (habit && habit.dates.indexOf(today) === -1) {
+            toggleDay(selectedIndex, today);
+            awardCoins(10);
+          }
+        } else if (actionBtn.dataset.action === 'remove') {
+          habits.splice(selectedIndex, 1);
+          saveHabits(habits);
+          if (habits.length === 0) {
+            selectedIndex = -1;
+          } else if (selectedIndex >= habits.length) {
+            selectedIndex = habits.length - 1;
+          }
+          render();
+        }
+      });
+
+      document.addEventListener('visibilitychange', function () {
+        if (!document.hidden) render();
+      });
+
+      var sidebarCollapsed = false;
+      try { sidebarCollapsed = localStorage.getItem('sprout-sidebar-collapsed') === '1'; } catch (e) {}
+
+      toggleBtn.addEventListener('click', function () {
+        sidebarCollapsed = !sidebarCollapsed;
+        layout.classList.toggle('sidebar-collapsed', sidebarCollapsed);
+        toggleBtn.setAttribute('aria-expanded', String(!sidebarCollapsed));
+        try { localStorage.setItem('sprout-sidebar-collapsed', sidebarCollapsed ? '1' : '0'); } catch (e) {}
+      });
+
+      if (sidebarCollapsed) layout.classList.add('sidebar-collapsed');
+      toggleBtn.setAttribute('aria-expanded', String(!sidebarCollapsed));
+
+      function updateCoinsUI() {
+        coinAmount.textContent = String(coins);
+      }
+
+      function flashCoinGain(n) {
+        coinGain.textContent = '+' + n;
+        coinGain.classList.remove('show');
+        void coinGain.offsetWidth;
+        coinGain.classList.add('show');
+      }
+
+      function awardCoins(n) {
+        coins += n;
+        saveCoins(coins);
+        updateCoinsUI();
+        flashCoinGain(n);
+      }
+
+      function renderShop() {
+        shopBalance.textContent = 'You have ' + coins + ' coins';
+        shopList.innerHTML = '';
+        PLANTS.forEach(function (plant) {
+          var owned = ownedPlants.indexOf(plant.id) !== -1;
+          var affordable = coins >= plant.price;
+          var card = document.createElement('div');
+          card.className = 'plant-card';
+          var btnDisabled = (owned || !affordable) ? ' disabled' : '';
+          var btnClass = 'buy-btn' + (owned ? ' owned' : '');
+          var btnText = owned ? 'Owned' : plant.price + ' coins';
+          card.innerHTML =
+            '<span class="plant-card-icon">' + plantSVG(plant.id, 0) + '</span>' +
+            '<span class="plant-card-name">' + plant.name + '</span>' +
+            '<button class="' + btnClass + '" type="button" data-buy="' + plant.id + '"' + btnDisabled + '>' + btnText + '</button>';
+          shopList.appendChild(card);
+        });
+      }
+
+      function openShop() {
+        shopModal.hidden = false;
+        renderShop();
+      }
+
+      function closeShop() {
+        shopModal.hidden = true;
+      }
+
+      shopBtn.addEventListener('click', openShop);
+      shopClose.addEventListener('click', closeShop);
+      shopModal.querySelector('.modal-backdrop').addEventListener('click', closeShop);
+      document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape' && !shopModal.hidden) closeShop();
+      });
+
+      shopList.addEventListener('click', function (e) {
+        var btn = e.target.closest('[data-buy]');
+        if (!btn) return;
+        var plant = findPlant(btn.dataset.buy);
+        if (!plant) return;
+        if (ownedPlants.indexOf(plant.id) !== -1) return;
+        if (coins < plant.price) return;
+        coins -= plant.price;
+        saveCoins(coins);
+        ownedPlants.push(plant.id);
+        saveOwnedPlants();
+        updateCoinsUI();
+        if (selectedIndex !== -1 && habits[selectedIndex]) {
+          habits[selectedIndex].plant = plant.id;
+          saveHabits(habits);
+        }
+        renderShop();
+        render();
+      });
+
+      function seedLeaves() {
+        var bg = document.querySelector('.bg');
+        if (!bg) return;
+        var colors = ['var(--sage)', 'var(--gold)', 'var(--moss)', 'var(--leaf)'];
+        var specs = [
+          { left: '6%',  size: 22, dur: 26, delay: -4,  sway: 55,  color: colors[0] },
+          { left: '20%', size: 16, dur: 33, delay: -19, sway: -65, color: colors[1] },
+          { left: '36%', size: 20, dur: 22, delay: -9,  sway: 45,  color: colors[2] },
+          { left: '52%', size: 15, dur: 30, delay: -24, sway: -50, color: colors[1] },
+          { left: '68%', size: 24, dur: 28, delay: -12, sway: 60,  color: colors[3] },
+          { left: '84%', size: 18, dur: 24, delay: -6,  sway: -55, color: colors[3] },
+          { left: '93%', size: 14, dur: 35, delay: -16, sway: 40,  color: colors[0] }
+        ];
+        specs.forEach(function (s) {
+          var leaf = document.createElement('span');
+          leaf.className = 'leaf';
+          leaf.style.left = s.left;
+          leaf.style.setProperty('--dur', s.dur + 's');
+          leaf.style.setProperty('--delay', s.delay + 's');
+          leaf.style.setProperty('--sway', s.sway + 'px');
+          leaf.style.color = s.color;
+          leaf.innerHTML = '<svg viewBox="0 0 24 24" width="' + s.size + '" height="' + s.size + '" aria-hidden="true"><path d="M12 2 C 7 7 6 14 8 19 C 10 21 14 21 16 19 C 18 14 17 7 12 2 Z" fill="currentColor"/></svg>';
+          bg.appendChild(leaf);
+        });
+      }
+
+      updateCoinsUI();
+      seedLeaves();
+      render();
+    })();
+  </script>
+</body>
+</html>
